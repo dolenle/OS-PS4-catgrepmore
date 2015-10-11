@@ -10,6 +10,9 @@
 #include <unistd.h>
 #include <fcntl.h>
 #include <string.h>
+#include <signal.h>
+
+void exitHandler();
 
 int buffer_size = 128;
 void *buffer;
@@ -20,6 +23,23 @@ char* pattern;
 int pipe1[2]; //pipe between cgm and grep
 int pipe2[2]; //pipe between grep and more
 
+const struct sigaction ignoreSig = {
+	.sa_handler = SIG_IGN,
+	.sa_mask = 0,
+	.sa_flags = 0
+};
+
+const struct sigaction interruptSig = {
+	.sa_handler = SIG_IGN,
+	.sa_mask = 0,
+	.sa_flags = 0
+};
+
+void exitHandler() {
+	printf("%d files, %lu bytes read\n", fileCounter, byteCounter);
+	exit(0);
+}
+
 int main(int argc, char *argv[]) {
 	if(argc < 3 || !argv[1] || strlen(argv[1]) == 0) {
 		fprintf(stderr, "Usage: %s pattern infile1 [infile2 ...]\n", argv[0]);
@@ -27,6 +47,8 @@ int main(int argc, char *argv[]) {
 	}
 
 	pattern = argv[1];
+	sigaction(SIGPIPE, &ignoreSig, NULL);
+	sigaction(SIGINT, &interruptSig, NULL);
 	if((buffer = (void*) malloc(buffer_size)) == NULL) {
 		fprintf(stderr, "Error: Unable to allocate buffer.\n");
 		return -1;
@@ -129,5 +151,5 @@ int main(int argc, char *argv[]) {
 			perror("Cannot access input file");
 		}
 	}
-	printf("%d files, %lu bytes read\n", fileCounter, byteCounter);
+	exitHandler();	
 }
