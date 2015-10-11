@@ -1,7 +1,7 @@
 /*
 	ECE357 Operating Systems
 	Dolen Le
-	PS 4 Cat piped into Grep piped into More (or Less)
+	PS 4 Cat piped into Grep piped into More (CGM)
 	Prof. Hakner
 */
 
@@ -13,10 +13,12 @@
 
 int buffer_size = 128;
 void *buffer;
+unsigned long byteCounter = 0;
+unsigned int fileCounter = 0;
 
 char* pattern;
-int pipe1[2];
-int pipe2[2];
+int pipe1[2]; //pipe between cgm and grep
+int pipe2[2]; //pipe between grep and more
 
 int main(int argc, char *argv[]) {
 	if(argc < 3 || !argv[1] || strlen(argv[1]) == 0) {
@@ -32,7 +34,7 @@ int main(int argc, char *argv[]) {
 
 	int i, infile;
 	for(i = 2; i<argc; i++) {
-		if((infile = open(argv[i], O_RDONLY)) >= 0) {
+		if(access(argv[i], R_OK) == 0) { //make sure it exists first
 			
 			if(pipe(pipe1) < 0) {
 				perror("Could not open pipe to grep");
@@ -80,10 +82,18 @@ int main(int argc, char *argv[]) {
 				fprintf(stderr, "You must halt. And catch fire.\n");
 				exit(-1);
 			} else if(more > 0) {
-				close(pipe2[0]);
+				if(close(pipe2[0]) < 0) {
+					perror("Cannot close pipe");
+					exit(-1);
+				}
+				if((infile = open(argv[i], O_RDONLY)) < 0) {
+					perror("Cannot open input file");
+					fprintf(stderr, "File: %s\n", argv[i]);
+					exit(-1);
+				}
 				int bytes, grepStat, moreStat;
 				while(1) {
-					bytes = read(infile, buffer, buffer_size);
+					byteCounter += bytes = read(infile, buffer, buffer_size);
 					if(bytes < 0) {
 						perror("Error reading input");
 						exit(-1);
@@ -94,22 +104,30 @@ int main(int argc, char *argv[]) {
 							exit(-1);
 						}
 						if(bytes < buffer_size) { //reached EOF
-							close(pipe1[1]);
+							if(close(pipe1[1]) < 0) {
+								perror("Cannot close write pipe");
+							}
 							break;
 						}
 					}
 				}
-				printf("waiting for grep (%d)...\n", grep);
+				//printf("waiting for grep (%d)...\n", grep);
 				waitpid(grep, &grepStat, 0);
-				printf("waiting for more (%d)...\n", more);
+				//printf("waiting for more (%d)...\n", more);
 				waitpid(more, &moreStat, 0);
+				if(close(infile) < 0) {
+					perror("Could not close input file");
+					fprintf(stderr, "File: %s\n", argv[i]);
+					exit(-1);
+				}
+				fileCounter++;
 			} else {
 				perror("Could not fork process for more");
 				exit(-1);
 			}
-
 		} else {
-			perror("Could not open input file");
+			perror("Cannot access input file");
 		}
 	}
+	printf("%d files, %lu bytes read\n", fileCounter, byteCounter);
 }
