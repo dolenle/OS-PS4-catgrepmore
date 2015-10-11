@@ -11,18 +11,12 @@
 #include <fcntl.h>
 #include <string.h>
 
-int doCopy(int src);
-
 int buffer_size = 128;
 void *buffer;
-int outfile = 1;
-int out_spec = 0;
 
 char* pattern;
 int pipe1[2];
 int pipe2[2];
-
-
 
 int main(int argc, char *argv[]) {
 	if(argc < 3 || !argv[1] || strlen(argv[1]) == 0) {
@@ -78,8 +72,13 @@ int main(int argc, char *argv[]) {
 					perror("Pipes are leaking everywhere");
 					exit(-1);
 				}
-				dup2(pipe2[0], STDIN_FILENO);
+				if(dup2(pipe2[0], STDIN_FILENO) < 0) {
+					perror("Could not redirect stdin for more");
+					exit(-1);
+				}
 				execlp("more", "more", NULL);
+				fprintf(stderr, "You must halt. And catch fire.\n");
+				exit(-1);
 			} else if(more > 0) {
 				close(pipe2[0]);
 				int bytes, grepStat, moreStat;
@@ -108,7 +107,6 @@ int main(int argc, char *argv[]) {
 				perror("Could not fork process for more");
 				exit(-1);
 			}
-
 
 		} else {
 			perror("Could not open input file");
