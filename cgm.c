@@ -2,6 +2,7 @@
 	ECE357 Operating Systems
 	Dolen Le
 	PS 4 Cat piped into Grep piped into More (CGM)
+	This is not a virus
 	Prof. Hakner
 */
 
@@ -30,7 +31,7 @@ const struct sigaction ignoreSig = {
 };
 
 const struct sigaction interruptSig = {
-	.sa_handler = SIG_IGN,
+	.sa_handler = exitHandler,
 	.sa_mask = 0,
 	.sa_flags = 0
 };
@@ -113,6 +114,7 @@ int main(int argc, char *argv[]) {
 					fprintf(stderr, "File: %s\n", argv[i]);
 					exit(-1);
 				}
+				fileCounter++;
 				int bytes, grepStat, moreStat;
 				while(1) {
 					byteCounter += bytes = read(infile, buffer, buffer_size);
@@ -142,7 +144,6 @@ int main(int argc, char *argv[]) {
 					fprintf(stderr, "File: %s\n", argv[i]);
 					exit(-1);
 				}
-				fileCounter++;
 			} else {
 				perror("Could not fork process for more");
 				exit(-1);
@@ -151,5 +152,6 @@ int main(int argc, char *argv[]) {
 			perror("Cannot access input file");
 		}
 	}
+	printf("Done...");
 	exitHandler();	
 }
