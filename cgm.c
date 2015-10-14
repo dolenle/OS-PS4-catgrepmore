@@ -135,9 +135,7 @@ int main(int argc, char *argv[]) {
 						}
 					}
 				}
-				//printf("waiting for grep (%d)...\n", grep);
 				waitpid(grep, &grepStat, 0);
-				//printf("waiting for more (%d)...\n", more);
 				waitpid(more, &moreStat, 0);
 				if(close(infile) < 0) {
 					perror("Could not close input file");
